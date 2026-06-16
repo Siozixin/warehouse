@@ -32,9 +32,10 @@ class ZoneCard extends StatelessWidget {
         color: AppTheme.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: status == ZoneStatus.critical
-              ? AppTheme.critical.withValues(alpha: 0.5)
-              : AppTheme.cardBorder,
+          color:
+              status == ZoneStatus.critical
+                  ? AppTheme.critical.withValues(alpha: 0.5)
+                  : AppTheme.cardBorder,
         ),
       ),
       child: Column(
@@ -65,8 +66,7 @@ class ZoneCard extends StatelessWidget {
                 ),
               ),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: statusColor.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(20),
@@ -91,9 +91,10 @@ class ZoneCard extends StatelessWidget {
                   icon: Icons.thermostat,
                   label: 'Temperature',
                   value: '${zone.temperature.toStringAsFixed(1)}°C',
-                  color: zone.temperature > maxTemp
-                      ? AppTheme.critical
-                      : ChartColors.temperature,
+                  color:
+                      zone.temperature > maxTemp
+                          ? AppTheme.critical
+                          : ChartColors.temperature,
                 ),
               ),
               const SizedBox(width: 10),
@@ -102,9 +103,10 @@ class ZoneCard extends StatelessWidget {
                   icon: Icons.water_drop,
                   label: 'Humidity',
                   value: '${zone.humidity.toStringAsFixed(0)}%',
-                  color: zone.humidity > maxHumidity
-                      ? AppTheme.critical
-                      : ChartColors.humidity,
+                  color:
+                      zone.humidity > maxHumidity
+                          ? AppTheme.critical
+                          : ChartColors.humidity,
                 ),
               ),
             ],
@@ -156,10 +158,7 @@ class ZoneCard extends StatelessWidget {
         ),
         TextButton.icon(
           onPressed: onToggle,
-          icon: Icon(
-            active ? Icons.stop : Icons.play_arrow,
-            size: 14,
-          ),
+          icon: Icon(active ? Icons.stop : Icons.play_arrow, size: 14),
           label: Text(
             active ? 'Stop' : 'Start',
             style: const TextStyle(fontSize: 11),
