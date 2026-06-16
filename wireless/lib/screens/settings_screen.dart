@@ -32,7 +32,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       appBar: AppBar(
         title: const Text(
           'Settings & Control',
-          style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600),
+          style: TextStyle(
+            color: AppTheme.textPrimary,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
       body: ListView(
@@ -93,7 +96,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   subtitle: const Text(
                     'Engage cooling when temperature exceeds threshold',
-                    style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                    style: TextStyle(
+                      color: AppTheme.textSecondary,
+                      fontSize: 12,
+                    ),
                   ),
                   value: _autoCooling,
                   activeColor: AppTheme.accent,
@@ -110,7 +116,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   subtitle: const Text(
                     'Engage ventilation/dehumidifier when humidity exceeds threshold',
-                    style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                    style: TextStyle(
+                      color: AppTheme.textSecondary,
+                      fontSize: 12,
+                    ),
                   ),
                   value: _autoDehumidify,
                   activeColor: AppTheme.accent,
@@ -269,8 +278,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14)),
-                Text(value, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: AppTheme.textPrimary,
+                    fontSize: 14,
+                  ),
+                ),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    color: AppTheme.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
               ],
             ),
           ),
@@ -282,7 +303,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             child: Text(
               status,
-              style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                color: color,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],
