@@ -65,8 +65,26 @@ class SensorSimulatorService {
   bool autoCoolingEnabled = true;
   bool autoDehumidifyEnabled = true;
   bool isConnected = true;
+  double _networkSpeed = 250.0;
+  double _signalStrength = 4.0; // 0 (poor) - 4 (excellent)
+  double _packetLoss = 0.5; // percent
   Timer? _timer;
   int _tick = 0;
+
+  String get networkSpeedLabel =>
+      isConnected ? '${_networkSpeed.toStringAsFixed(0)} Mbps' : 'Disconnected';
+
+  int get devicesConnected => zones.length;
+
+  String get signalLabel {
+    if (!isConnected) return 'No signal';
+    if (_signalStrength >= 3.5) return 'Excellent';
+    if (_signalStrength >= 2.5) return 'Good';
+    if (_signalStrength >= 1.5) return 'Fair';
+    return 'Poor';
+  }
+
+  String get packetLossLabel => '${_packetLoss.toStringAsFixed(1)}%';
 
   void start() {
     _timer?.cancel();
@@ -85,14 +103,18 @@ class SensorSimulatorService {
     for (final zone in zones) {
       final drift = (_random.nextDouble() - 0.45) * 0.8;
       zone.temperature = (zone.temperature + drift).clamp(1.0, 15.0);
-      zone.humidity =
-          (zone.humidity + (_random.nextDouble() - 0.5) * 2).clamp(40.0, 95.0);
+      zone.humidity = (zone.humidity + (_random.nextDouble() - 0.5) * 2).clamp(
+        40.0,
+        95.0,
+      );
 
-      zone.history.add(SensorReading(
-        timestamp: DateTime.now(),
-        temperature: zone.temperature,
-        humidity: zone.humidity,
-      ));
+      zone.history.add(
+        SensorReading(
+          timestamp: DateTime.now(),
+          temperature: zone.temperature,
+          humidity: zone.humidity,
+        ),
+      );
       if (zone.history.length > 30) {
         zone.history.removeAt(0);
       }
@@ -149,13 +171,26 @@ class SensorSimulatorService {
       }
     }
 
-  if (_tick % 5 == 0 && _random.nextDouble() > 0.6) {
+    if (_tick % 5 == 0) {
+      _networkSpeed = (_networkSpeed + (_random.nextDouble() - 0.5) * 40).clamp(
+        60.0,
+        500.0,
+      );
+      _signalStrength = (_signalStrength + (_random.nextDouble() - 0.5) * 1.0)
+          .clamp(0.0, 4.0);
+      _packetLoss = (_packetLoss + (_random.nextDouble() - 0.5) * 4.0).clamp(
+        0.0,
+        50.0,
+      );
+    }
+
+    if (_tick % 5 == 0 && _random.nextDouble() > 0.6) {
       final zone = zones[_random.nextInt(zones.length)];
       if (zone.temperature > maxTemperature - 1) {
         _addAlert(
           title: 'Temperature Warning',
           message:
-              '$zone.name approaching limit: ${zone.temperature.toStringAsFixed(1)}°C (max ${maxTemperature.toStringAsFixed(1)}°C)',
+              '${zone.name} approaching limit: ${zone.temperature.toStringAsFixed(1)}°C (max ${maxTemperature.toStringAsFixed(1)}°C)',
           type: AlertType.temperature,
           severity: AlertSeverity.warning,
           zoneId: zone.id,
@@ -165,7 +200,7 @@ class SensorSimulatorService {
         _addAlert(
           title: 'Humidity Warning',
           message:
-              '$zone.name approaching limit: ${zone.humidity.toStringAsFixed(0)}% (max ${maxHumidity.toStringAsFixed(0)}%)',
+              '${zone.name} approaching limit: ${zone.humidity.toStringAsFixed(0)}% (max ${maxHumidity.toStringAsFixed(0)}%)',
           type: AlertType.humidity,
           severity: AlertSeverity.warning,
           zoneId: zone.id,
@@ -184,10 +219,12 @@ class SensorSimulatorService {
     required AlertSeverity severity,
     String? zoneId,
   }) {
-    final duplicate = alerts.any((a) =>
-        a.title == title &&
-        a.zoneId == zoneId &&
-        DateTime.now().difference(a.timestamp).inSeconds < 15);
+    final duplicate = alerts.any(
+      (a) =>
+          a.title == title &&
+          a.zoneId == zoneId &&
+          DateTime.now().difference(a.timestamp).inSeconds < 15,
+    );
     if (duplicate) return;
 
     alerts.insert(
@@ -224,9 +261,10 @@ class SensorSimulatorService {
     final zone = zones.firstWhere((z) => z.id == zoneId);
     zone.dehumidifierActive = !zone.dehumidifierActive;
     _addAlert(
-      title: zone.dehumidifierActive
-          ? 'Manual Dehumidifier ON'
-          : 'Manual Dehumidifier OFF',
+      title:
+          zone.dehumidifierActive
+              ? 'Manual Dehumidifier ON'
+              : 'Manual Dehumidifier OFF',
       message:
           '${zone.name} ventilation/dehumidifier ${zone.dehumidifierActive ? "activated" : "deactivated"} by manager.',
       type: AlertType.system,
@@ -241,9 +279,10 @@ class SensorSimulatorService {
     autoCoolingEnabled = enabled;
     _addAlert(
       title: 'Auto-Cooling ${enabled ? "Enabled" : "Disabled"}',
-      message: enabled
-          ? 'System will automatically engage cooling when thresholds are exceeded.'
-          : 'Manual control required for cooling systems.',
+      message:
+          enabled
+              ? 'System will automatically engage cooling when thresholds are exceeded.'
+              : 'Manual control required for cooling systems.',
       type: AlertType.system,
       severity: AlertSeverity.info,
     );
@@ -255,9 +294,10 @@ class SensorSimulatorService {
     autoDehumidifyEnabled = enabled;
     _addAlert(
       title: 'Auto-Dehumidify ${enabled ? "Enabled" : "Disabled"}',
-      message: enabled
-          ? 'System will engage ventilation/dehumidifier when humidity exceeds threshold.'
-          : 'Manual control required for humidity actuators.',
+      message:
+          enabled
+              ? 'System will engage ventilation/dehumidifier when humidity exceeds threshold.'
+              : 'Manual control required for humidity actuators.',
       type: AlertType.system,
       severity: AlertSeverity.info,
     );
@@ -306,6 +346,10 @@ class SensorSimulatorService {
       zones.where((z) => z.dehumidifierActive).length;
 
   int get criticalZoneCount =>
-      zones.where((z) => z.getStatus(maxTemperature, maxHumidity) ==
-          ZoneStatus.critical).length;
+      zones
+          .where(
+            (z) =>
+                z.getStatus(maxTemperature, maxHumidity) == ZoneStatus.critical,
+          )
+          .length;
 }
