@@ -63,6 +63,7 @@ class SensorSimulatorService {
   double maxTemperature = 8.0;
   double maxHumidity = 80.0;
   bool autoCoolingEnabled = true;
+  bool autoDehumidifyEnabled = true;
   bool isConnected = true;
   Timer? _timer;
   int _tick = 0;
@@ -96,26 +97,51 @@ class SensorSimulatorService {
         zone.history.removeAt(0);
       }
 
-      final status = zone.getStatus(maxTemperature, maxHumidity);
+      final tempHigh = zone.temperature > maxTemperature;
+      final humidityHigh = zone.humidity > maxHumidity;
 
-      if (autoCoolingEnabled && status == ZoneStatus.critical) {
+      if (autoCoolingEnabled && tempHigh) {
         if (!zone.coolingActive) {
           zone.coolingActive = true;
           _addAlert(
             title: 'Auto-Cooling Activated',
             message:
-                '${zone.name}: Temperature ${zone.temperature.toStringAsFixed(1)}°C exceeds threshold. Cooling system engaged.',
+                '${zone.name}: Temperature ${zone.temperature.toStringAsFixed(1)}°C exceeds ${maxTemperature.toStringAsFixed(1)}°C. Cooling engaged.',
             type: AlertType.temperature,
             severity: AlertSeverity.warning,
             zoneId: zone.id,
           );
         }
         zone.temperature = (zone.temperature - 0.5).clamp(1.0, 15.0);
-      } else if (zone.coolingActive && status == ZoneStatus.normal) {
+      } else if (zone.coolingActive && !tempHigh) {
         zone.coolingActive = false;
         _addAlert(
           title: 'Cooling Deactivated',
-          message: '${zone.name}: Temperature normalized. Cooling system off.',
+          message: '${zone.name}: Temperature normalized. Cooling off.',
+          type: AlertType.system,
+          severity: AlertSeverity.info,
+          zoneId: zone.id,
+        );
+      }
+
+      if (autoDehumidifyEnabled && humidityHigh) {
+        if (!zone.dehumidifierActive) {
+          zone.dehumidifierActive = true;
+          _addAlert(
+            title: 'Auto-Dehumidifier Activated',
+            message:
+                '${zone.name}: Humidity ${zone.humidity.toStringAsFixed(0)}% exceeds ${maxHumidity.toStringAsFixed(0)}%. Ventilation/dehumidifier engaged.',
+            type: AlertType.humidity,
+            severity: AlertSeverity.warning,
+            zoneId: zone.id,
+          );
+        }
+        zone.humidity = (zone.humidity - 0.7).clamp(40.0, 95.0);
+      } else if (zone.dehumidifierActive && !humidityHigh) {
+        zone.dehumidifierActive = false;
+        _addAlert(
+          title: 'Dehumidifier Deactivated',
+          message: '${zone.name}: Humidity normalized. Ventilation off.',
           type: AlertType.system,
           severity: AlertSeverity.info,
           zoneId: zone.id,
@@ -129,8 +155,18 @@ class SensorSimulatorService {
         _addAlert(
           title: 'Temperature Warning',
           message:
-              '$zone.name approaching limit: ${zone.temperature.toStringAsFixed(1)}°C (max $maxTemperature°C)',
+              '$zone.name approaching limit: ${zone.temperature.toStringAsFixed(1)}°C (max ${maxTemperature.toStringAsFixed(1)}°C)',
           type: AlertType.temperature,
+          severity: AlertSeverity.warning,
+          zoneId: zone.id,
+        );
+      }
+      if (zone.humidity > maxHumidity - 5) {
+        _addAlert(
+          title: 'Humidity Warning',
+          message:
+              '$zone.name approaching limit: ${zone.humidity.toStringAsFixed(0)}% (max ${maxHumidity.toStringAsFixed(0)}%)',
+          type: AlertType.humidity,
           severity: AlertSeverity.warning,
           zoneId: zone.id,
         );
@@ -184,6 +220,23 @@ class SensorSimulatorService {
     _alertsController.add(alerts);
   }
 
+  void toggleDehumidifier(String zoneId) {
+    final zone = zones.firstWhere((z) => z.id == zoneId);
+    zone.dehumidifierActive = !zone.dehumidifierActive;
+    _addAlert(
+      title: zone.dehumidifierActive
+          ? 'Manual Dehumidifier ON'
+          : 'Manual Dehumidifier OFF',
+      message:
+          '${zone.name} ventilation/dehumidifier ${zone.dehumidifierActive ? "activated" : "deactivated"} by manager.',
+      type: AlertType.system,
+      severity: AlertSeverity.info,
+      zoneId: zoneId,
+    );
+    _zonesController.add(zones);
+    _alertsController.add(alerts);
+  }
+
   void setAutoCooling(bool enabled) {
     autoCoolingEnabled = enabled;
     _addAlert(
@@ -191,6 +244,20 @@ class SensorSimulatorService {
       message: enabled
           ? 'System will automatically engage cooling when thresholds are exceeded.'
           : 'Manual control required for cooling systems.',
+      type: AlertType.system,
+      severity: AlertSeverity.info,
+    );
+    _zonesController.add(zones);
+    _alertsController.add(alerts);
+  }
+
+  void setAutoDehumidify(bool enabled) {
+    autoDehumidifyEnabled = enabled;
+    _addAlert(
+      title: 'Auto-Dehumidify ${enabled ? "Enabled" : "Disabled"}',
+      message: enabled
+          ? 'System will engage ventilation/dehumidifier when humidity exceeds threshold.'
+          : 'Manual control required for humidity actuators.',
       type: AlertType.system,
       severity: AlertSeverity.info,
     );
@@ -234,6 +301,9 @@ class SensorSimulatorService {
       zones.map((z) => z.humidity).reduce((a, b) => a + b) / zones.length;
 
   int get activeCoolingCount => zones.where((z) => z.coolingActive).length;
+
+  int get activeDehumidifierCount =>
+      zones.where((z) => z.dehumidifierActive).length;
 
   int get criticalZoneCount =>
       zones.where((z) => z.getStatus(maxTemperature, maxHumidity) ==

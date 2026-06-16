@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 
 import '../models/warehouse_zone.dart';
 import '../theme/app_theme.dart';
+import 'sensor_charts.dart';
 
 class ZoneCard extends StatelessWidget {
   final WarehouseZone zone;
   final double maxTemp;
   final double maxHumidity;
   final VoidCallback onToggleCooling;
+  final VoidCallback onToggleDehumidifier;
 
   const ZoneCard({
     super.key,
@@ -15,6 +17,7 @@ class ZoneCard extends StatelessWidget {
     required this.maxTemp,
     required this.maxHumidity,
     required this.onToggleCooling,
+    required this.onToggleDehumidifier,
   });
 
   @override
@@ -24,7 +27,7 @@ class ZoneCard extends StatelessWidget {
     final statusLabel = _statusLabel(status);
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppTheme.surface,
         borderRadius: BorderRadius.circular(12),
@@ -47,7 +50,7 @@ class ZoneCard extends StatelessWidget {
                       zone.name,
                       style: const TextStyle(
                         color: AppTheme.textPrimary,
-                        fontSize: 16,
+                        fontSize: 15,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -55,7 +58,7 @@ class ZoneCard extends StatelessWidget {
                       zone.location,
                       style: const TextStyle(
                         color: AppTheme.textSecondary,
-                        fontSize: 12,
+                        fontSize: 11,
                       ),
                     ),
                   ],
@@ -73,14 +76,14 @@ class ZoneCard extends StatelessWidget {
                   statusLabel,
                   style: TextStyle(
                     color: statusColor,
-                    fontSize: 11,
+                    fontSize: 10,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
@@ -90,10 +93,10 @@ class ZoneCard extends StatelessWidget {
                   value: '${zone.temperature.toStringAsFixed(1)}°C',
                   color: zone.temperature > maxTemp
                       ? AppTheme.critical
-                      : AppTheme.accent,
+                      : ChartColors.temperature,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               Expanded(
                 child: _metricTile(
                   icon: Icons.water_drop,
@@ -101,55 +104,73 @@ class ZoneCard extends StatelessWidget {
                   value: '${zone.humidity.toStringAsFixed(0)}%',
                   color: zone.humidity > maxHumidity
                       ? AppTheme.critical
-                      : AppTheme.info,
+                      : ChartColors.humidity,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Icon(
-                zone.coolingActive
-                    ? Icons.ac_unit
-                    : Icons.ac_unit_outlined,
-                color: zone.coolingActive
-                    ? AppTheme.success
-                    : AppTheme.textSecondary,
-                size: 18,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                zone.coolingActive ? 'Cooling Active' : 'Cooling Off',
-                style: TextStyle(
-                  color: zone.coolingActive
-                      ? AppTheme.success
-                      : AppTheme.textSecondary,
-                  fontSize: 12,
-                ),
-              ),
-              const Spacer(),
-              TextButton.icon(
-                onPressed: onToggleCooling,
-                icon: Icon(
-                  zone.coolingActive ? Icons.stop : Icons.play_arrow,
-                  size: 16,
-                ),
-                label: Text(
-                  zone.coolingActive ? 'Stop' : 'Start',
-                  style: const TextStyle(fontSize: 12),
-                ),
-                style: TextButton.styleFrom(
-                  foregroundColor:
-                      zone.coolingActive ? AppTheme.critical : AppTheme.accent,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                ),
-              ),
-            ],
+          const SizedBox(height: 10),
+          _actuatorRow(
+            icon: Icons.ac_unit,
+            label: 'Cooling',
+            active: zone.coolingActive,
+            activeColor: AppTheme.success,
+            onToggle: onToggleCooling,
+          ),
+          const SizedBox(height: 6),
+          _actuatorRow(
+            icon: Icons.air,
+            label: 'Dehumidifier / Ventilation',
+            active: zone.dehumidifierActive,
+            activeColor: ChartColors.humidity,
+            onToggle: onToggleDehumidifier,
           ),
         ],
       ),
+    );
+  }
+
+  Widget _actuatorRow({
+    required IconData icon,
+    required String label,
+    required bool active,
+    required Color activeColor,
+    required VoidCallback onToggle,
+  }) {
+    return Row(
+      children: [
+        Icon(
+          icon,
+          color: active ? activeColor : AppTheme.textSecondary,
+          size: 16,
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            active ? '$label — ON' : '$label — OFF',
+            style: TextStyle(
+              color: active ? activeColor : AppTheme.textSecondary,
+              fontSize: 11,
+            ),
+          ),
+        ),
+        TextButton.icon(
+          onPressed: onToggle,
+          icon: Icon(
+            active ? Icons.stop : Icons.play_arrow,
+            size: 14,
+          ),
+          label: Text(
+            active ? 'Stop' : 'Start',
+            style: const TextStyle(fontSize: 11),
+          ),
+          style: TextButton.styleFrom(
+            foregroundColor: active ? AppTheme.critical : AppTheme.accent,
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            visualDensity: VisualDensity.compact,
+          ),
+        ),
+      ],
     );
   }
 
@@ -160,14 +181,14 @@ class ZoneCard extends StatelessWidget {
     required Color color,
   }) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: AppTheme.surfaceLight,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         children: [
-          Icon(icon, color: color, size: 20),
+          Icon(icon, color: color, size: 18),
           const SizedBox(width: 8),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -183,7 +204,7 @@ class ZoneCard extends StatelessWidget {
                 value,
                 style: TextStyle(
                   color: color,
-                  fontSize: 16,
+                  fontSize: 15,
                   fontWeight: FontWeight.bold,
                 ),
               ),

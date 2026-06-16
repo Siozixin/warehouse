@@ -9,6 +9,7 @@ class WarehouseZone {
   double temperature;
   double humidity;
   bool coolingActive;
+  bool dehumidifierActive;
   final List<SensorReading> history;
 
   WarehouseZone({
@@ -18,6 +19,7 @@ class WarehouseZone {
     required this.temperature,
     required this.humidity,
     this.coolingActive = false,
+    this.dehumidifierActive = false,
     List<SensorReading>? history,
   }) : history = history ?? [];
 

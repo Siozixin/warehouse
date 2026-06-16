@@ -15,6 +15,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late double _maxTemp;
   late double _maxHumidity;
   late bool _autoCooling;
+  late bool _autoDehumidify;
 
   @override
   void initState() {
@@ -22,6 +23,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _maxTemp = _service.maxTemperature;
     _maxHumidity = _service.maxHumidity;
     _autoCooling = _service.autoCoolingEnabled;
+    _autoDehumidify = _service.autoDehumidifyEnabled;
   }
 
   @override
@@ -82,21 +84,42 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 20),
           _sectionTitle('Automation'),
           _settingsCard(
-            child: SwitchListTile(
-              title: const Text(
-                'Auto-Cooling',
-                style: TextStyle(color: AppTheme.textPrimary),
-              ),
-              subtitle: const Text(
-                'Automatically engage cooling when thresholds are exceeded',
-                style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
-              ),
-              value: _autoCooling,
-              activeColor: AppTheme.accent,
-              onChanged: (v) {
-                setState(() => _autoCooling = v);
-                _service.setAutoCooling(v);
-              },
+            child: Column(
+              children: [
+                SwitchListTile(
+                  title: const Text(
+                    'Auto-Cooling',
+                    style: TextStyle(color: AppTheme.textPrimary),
+                  ),
+                  subtitle: const Text(
+                    'Engage cooling when temperature exceeds threshold',
+                    style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                  ),
+                  value: _autoCooling,
+                  activeColor: AppTheme.accent,
+                  onChanged: (v) {
+                    setState(() => _autoCooling = v);
+                    _service.setAutoCooling(v);
+                  },
+                ),
+                const Divider(color: AppTheme.cardBorder),
+                SwitchListTile(
+                  title: const Text(
+                    'Auto-Dehumidify',
+                    style: TextStyle(color: AppTheme.textPrimary),
+                  ),
+                  subtitle: const Text(
+                    'Engage ventilation/dehumidifier when humidity exceeds threshold',
+                    style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                  ),
+                  value: _autoDehumidify,
+                  activeColor: AppTheme.accent,
+                  onChanged: (v) {
+                    setState(() => _autoDehumidify = v);
+                    _service.setAutoDehumidify(v);
+                  },
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 20),

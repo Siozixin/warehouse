@@ -5,8 +5,8 @@ import '../models/alert.dart';
 import '../models/warehouse_zone.dart';
 import '../services/sensor_simulator_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/sensor_charts.dart';
 import '../widgets/stat_card.dart';
-import '../widgets/temperature_chart.dart';
 import '../widgets/zone_card.dart';
 import 'notifications_screen.dart';
 import 'settings_screen.dart';
@@ -64,25 +64,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _buildStatsRow(zones),
-                        const SizedBox(height: 16),
-                        TemperatureChart(
-                          readings: selectedZone.history,
-                          maxThreshold: _service.maxTemperature,
-                          title:
-                              '${selectedZone.name} — Live Sensor Data',
-                        ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 12),
                         _buildZoneSelector(zones),
+                        const SizedBox(height: 10),
+                        SensorCharts(
+                          readings: selectedZone.history,
+                          maxTempThreshold: _service.maxTemperature,
+                          maxHumidityThreshold: _service.maxHumidity,
+                          zoneName: selectedZone.name,
+                        ),
                         const SizedBox(height: 12),
                         ...zones.map(
                           (zone) => Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
+                            padding: const EdgeInsets.only(bottom: 10),
                             child: ZoneCard(
                               zone: zone,
                               maxTemp: _service.maxTemperature,
                               maxHumidity: _service.maxHumidity,
                               onToggleCooling: () =>
                                   _service.toggleCooling(zone.id),
+                              onToggleDehumidifier: () =>
+                                  _service.toggleDehumidifier(zone.id),
                             ),
                           ),
                         ),
@@ -224,46 +226,55 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildStatsRow(List<WarehouseZone> zones) {
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 12,
-      crossAxisSpacing: 12,
-      childAspectRatio: 1.6,
-      children: [
-        StatCard(
-          label: 'Avg Temperature',
-          value: _service.averageTemperature.toStringAsFixed(1),
-          unit: '°C',
-          icon: Icons.thermostat,
-          color: AppTheme.accent,
-          subtitle: 'Target: ≤${_service.maxTemperature}°C',
-        ),
-        StatCard(
-          label: 'Avg Humidity',
-          value: _service.averageHumidity.toStringAsFixed(0),
-          unit: '%',
-          icon: Icons.water_drop,
-          color: AppTheme.info,
-          subtitle: 'Target: ≤${_service.maxHumidity}%',
-        ),
-        StatCard(
-          label: 'Cooling Active',
-          value: '${_service.activeCoolingCount}',
-          unit: '/ ${zones.length} zones',
-          icon: Icons.ac_unit,
-          color: AppTheme.success,
-        ),
-        StatCard(
-          label: 'Critical Zones',
-          value: '${_service.criticalZoneCount}',
-          icon: Icons.warning_amber_rounded,
-          color: _service.criticalZoneCount > 0
-              ? AppTheme.critical
-              : AppTheme.success,
-        ),
-      ],
+    final cards = [
+      StatCard(
+        label: 'Avg Temp',
+        value: _service.averageTemperature.toStringAsFixed(1),
+        unit: '°C',
+        icon: Icons.thermostat,
+        color: ChartColors.temperature,
+        subtitle: '≤${_service.maxTemperature.toStringAsFixed(1)}°C',
+      ),
+      StatCard(
+        label: 'Avg Humidity',
+        value: _service.averageHumidity.toStringAsFixed(0),
+        unit: '%',
+        icon: Icons.water_drop,
+        color: ChartColors.humidity,
+        subtitle: '≤${_service.maxHumidity.toStringAsFixed(0)}%',
+      ),
+      StatCard(
+        label: 'Cooling',
+        value: '${_service.activeCoolingCount}',
+        unit: '/${zones.length}',
+        icon: Icons.ac_unit,
+        color: AppTheme.success,
+      ),
+      StatCard(
+        label: 'Dehumidifier',
+        value: '${_service.activeDehumidifierCount}',
+        unit: '/${zones.length}',
+        icon: Icons.air,
+        color: ChartColors.humidity,
+      ),
+      StatCard(
+        label: 'Critical',
+        value: '${_service.criticalZoneCount}',
+        icon: Icons.warning_amber_rounded,
+        color: _service.criticalZoneCount > 0
+            ? AppTheme.critical
+            : AppTheme.success,
+      ),
+    ];
+
+    return SizedBox(
+      height: 64,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: cards.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (_, index) => SizedBox(width: 148, child: cards[index]),
+      ),
     );
   }
 
