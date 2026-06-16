@@ -22,18 +22,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final _service = SensorSimulatorService();
   final _timeFormat = DateFormat('HH:mm:ss');
   int _selectedZoneIndex = 0;
-  int _unreadCount = 0;
 
   @override
   void initState() {
     super.initState();
     _service.start();
-    _unreadCount = _service.unreadCount;
-    _service.alertsStream.listen((alerts) {
-      if (mounted) {
-        setState(() => _unreadCount = alerts.where((a) => !a.isRead).length);
-      }
-    });
+    // alerts stream handled via direct reads in RecentAlerts; no header badge
   }
 
   @override
@@ -81,10 +75,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               zone: zone,
                               maxTemp: _service.maxTemperature,
                               maxHumidity: _service.maxHumidity,
-                              onToggleCooling: () =>
-                                  _service.toggleCooling(zone.id),
-                              onToggleDehumidifier: () =>
-                                  _service.toggleDehumidifier(zone.id),
+                              onToggleCooling:
+                                  () => _service.toggleCooling(zone.id),
+                              onToggleDehumidifier:
+                                  () => _service.toggleDehumidifier(zone.id),
                             ),
                           ),
                         ),
@@ -115,7 +109,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
               color: AppTheme.primary.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.warehouse, color: AppTheme.accent, size: 28),
+            child: const Icon(
+              Icons.warehouse,
+              color: AppTheme.accent,
+              size: 28,
+            ),
           ),
           const SizedBox(width: 12),
           const Expanded(
@@ -137,50 +135,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ],
             ),
           ),
-          _notificationButton(),
           const SizedBox(width: 8),
-          IconButton(
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const SettingsScreen()),
-            ),
-            icon: const Icon(Icons.settings, color: AppTheme.textSecondary),
-          ),
         ],
       ),
-    );
-  }
-
-  Widget _notificationButton() {
-    return Stack(
-      children: [
-        IconButton(
-          onPressed: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const NotificationsScreen()),
-          ),
-          icon: const Icon(Icons.notifications_outlined,
-              color: AppTheme.textSecondary),
-        ),
-        if (_unreadCount > 0)
-          Positioned(
-            right: 8,
-            top: 8,
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: const BoxDecoration(
-                color: AppTheme.critical,
-                shape: BoxShape.circle,
-              ),
-              constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
-              child: Text(
-                '$_unreadCount',
-                style: const TextStyle(color: Colors.white, fontSize: 10),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ),
-      ],
     );
   }
 
@@ -206,7 +163,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(width: 8),
           const Text(
             '5G Connected',
-            style: TextStyle(color: AppTheme.success, fontSize: 12, fontWeight: FontWeight.w600),
+            style: TextStyle(
+              color: AppTheme.success,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
           ),
           const SizedBox(width: 12),
           const Icon(Icons.lock, color: AppTheme.success, size: 14),
@@ -214,6 +175,39 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const Text(
             'TLS Encrypted',
             style: TextStyle(color: AppTheme.textSecondary, fontSize: 11),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            _service.networkSpeedLabel,
+            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            'Devices: ${_service.devicesConnected}',
+            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11),
+          ),
+          const SizedBox(width: 8),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.network_cell, color: AppTheme.textSecondary, size: 14),
+              const SizedBox(width: 4),
+              Text(
+                _service.signalLabel,
+                style: const TextStyle(
+                  color: AppTheme.textSecondary,
+                  fontSize: 11,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Loss: ${_service.packetLossLabel}',
+                style: const TextStyle(
+                  color: AppTheme.textSecondary,
+                  fontSize: 11,
+                ),
+              ),
+            ],
           ),
           const Spacer(),
           Text(
@@ -261,14 +255,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
         label: 'Critical',
         value: '${_service.criticalZoneCount}',
         icon: Icons.warning_amber_rounded,
-        color: _service.criticalZoneCount > 0
-            ? AppTheme.critical
-            : AppTheme.success,
+        color:
+            _service.criticalZoneCount > 0
+                ? AppTheme.critical
+                : AppTheme.success,
       ),
     ];
 
     return SizedBox(
-      height: 64,
+      height: 116,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: cards.length,
@@ -282,28 +277,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
-        children: zones.asMap().entries.map((entry) {
-          final index = entry.key;
-          final zone = entry.value;
-          final isSelected = index == _selectedZoneIndex;
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: ChoiceChip(
-              label: Text(zone.name),
-              selected: isSelected,
-              onSelected: (_) => setState(() => _selectedZoneIndex = index),
-              selectedColor: AppTheme.primary,
-              backgroundColor: AppTheme.surface,
-              labelStyle: TextStyle(
-                color: isSelected ? Colors.white : AppTheme.textSecondary,
-                fontSize: 12,
-              ),
-              side: BorderSide(
-                color: isSelected ? AppTheme.primary : AppTheme.cardBorder,
-              ),
-            ),
-          );
-        }).toList(),
+        children:
+            zones.asMap().entries.map((entry) {
+              final index = entry.key;
+              final zone = entry.value;
+              final isSelected = index == _selectedZoneIndex;
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: ChoiceChip(
+                  label: Text(zone.name),
+                  selected: isSelected,
+                  onSelected: (_) => setState(() => _selectedZoneIndex = index),
+                  selectedColor: AppTheme.primary,
+                  backgroundColor: AppTheme.surface,
+                  labelStyle: TextStyle(
+                    color: isSelected ? Colors.white : AppTheme.textSecondary,
+                    fontSize: 12,
+                  ),
+                  side: BorderSide(
+                    color: isSelected ? AppTheme.primary : AppTheme.cardBorder,
+                  ),
+                ),
+              );
+            }).toList(),
       ),
     );
   }
@@ -325,54 +321,59 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
             const Spacer(),
             TextButton(
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const NotificationsScreen()),
-              ),
+              onPressed:
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const NotificationsScreen(),
+                    ),
+                  ),
               child: const Text('View all', style: TextStyle(fontSize: 12)),
             ),
           ],
         ),
-        ...recent.map((alert) => Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppTheme.surface,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppTheme.cardBorder),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    _alertIcon(alert.severity),
-                    color: _alertColor(alert.severity),
-                    size: 18,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          alert.title,
-                          style: const TextStyle(
-                            color: AppTheme.textPrimary,
-                            fontSize: 13,
-                          ),
+        ...recent.map(
+          (alert) => Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppTheme.surface,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppTheme.cardBorder),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  _alertIcon(alert.severity),
+                  color: _alertColor(alert.severity),
+                  size: 18,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        alert.title,
+                        style: const TextStyle(
+                          color: AppTheme.textPrimary,
+                          fontSize: 13,
                         ),
-                        Text(
-                          _timeFormat.format(alert.timestamp),
-                          style: const TextStyle(
-                            color: AppTheme.textSecondary,
-                            fontSize: 10,
-                          ),
+                      ),
+                      Text(
+                        _timeFormat.format(alert.timestamp),
+                        style: const TextStyle(
+                          color: AppTheme.textSecondary,
+                          fontSize: 10,
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            )),
+                ),
+              ],
+            ),
+          ),
+        ),
       ],
     );
   }
