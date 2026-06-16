@@ -110,11 +110,12 @@ class _MetricChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final timeFormat = DateFormat('HH:mm:ss');
-    final spots = readings
-        .asMap()
-        .entries
-        .map((e) => FlSpot(e.key.toDouble(), valueOf(e.value)))
-        .toList();
+    final spots =
+        readings
+            .asMap()
+            .entries
+            .map((e) => FlSpot(e.key.toDouble(), valueOf(e.value)))
+            .toList();
 
     final thresholdSpots = List.generate(
       readings.length,
@@ -153,11 +154,7 @@ class _MetricChart extends StatelessWidget {
                 ),
               ),
               const Spacer(),
-              Container(
-                width: 16,
-                height: 2,
-                color: ChartColors.threshold,
-              ),
+              Container(width: 16, height: 2, color: ChartColors.threshold),
               const SizedBox(width: 4),
               Text(
                 thresholdLabel,
@@ -178,10 +175,11 @@ class _MetricChart extends StatelessWidget {
                 gridData: FlGridData(
                   show: true,
                   drawVerticalLine: false,
-                  getDrawingHorizontalLine: (value) => FlLine(
-                    color: AppTheme.cardBorder.withValues(alpha: 0.4),
-                    strokeWidth: 1,
-                  ),
+                  getDrawingHorizontalLine:
+                      (value) => FlLine(
+                        color: AppTheme.cardBorder.withValues(alpha: 0.4),
+                        strokeWidth: 1,
+                      ),
                 ),
                 titlesData: FlTitlesData(
                   leftTitles: AxisTitles(
@@ -189,13 +187,14 @@ class _MetricChart extends StatelessWidget {
                       showTitles: true,
                       reservedSize: 28,
                       interval: (maxY - minY) / 4,
-                      getTitlesWidget: (value, meta) => Text(
-                        '${value.toInt()}$unit',
-                        style: const TextStyle(
-                          color: AppTheme.textSecondary,
-                          fontSize: 9,
-                        ),
-                      ),
+                      getTitlesWidget:
+                          (value, meta) => Text(
+                            '${value.toInt()}$unit',
+                            style: const TextStyle(
+                              color: AppTheme.textSecondary,
+                              fontSize: 9,
+                            ),
+                          ),
                     ),
                   ),
                   bottomTitles: AxisTitles(
@@ -242,12 +241,12 @@ class _MetricChart extends StatelessWidget {
                     barWidth: 2.5,
                     dotData: FlDotData(
                       show: readings.length <= 8,
-                      getDotPainter: (spot, percent, bar, index) =>
-                          FlDotCirclePainter(
-                        radius: 2,
-                        color: lineColor,
-                        strokeWidth: 0,
-                      ),
+                      getDotPainter:
+                          (spot, percent, bar, index) => FlDotCirclePainter(
+                            radius: 2,
+                            color: lineColor,
+                            strokeWidth: 0,
+                          ),
                     ),
                     belowBarData: BarAreaData(
                       show: true,
