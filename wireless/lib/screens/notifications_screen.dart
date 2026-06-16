@@ -22,14 +22,19 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       appBar: AppBar(
         title: const Text(
           'Notifications',
-          style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600),
+          style: TextStyle(
+            color: AppTheme.textPrimary,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () {
               _service.markAllAlertsRead();
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('All notifications marked as read')),
+                const SnackBar(
+                  content: Text('All notifications marked as read'),
+                ),
               );
             },
             child: const Text('Mark all read'),
@@ -46,7 +51,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.notifications_none, size: 64, color: AppTheme.textSecondary),
+                  Icon(
+                    Icons.notifications_none,
+                    size: 64,
+                    color: AppTheme.textSecondary,
+                  ),
                   SizedBox(height: 16),
                   Text(
                     'No notifications',
@@ -101,9 +110,10 @@ class _AlertTile extends StatelessWidget {
           color: alert.isRead ? AppTheme.surface : AppTheme.surfaceLight,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: alert.isRead
-                ? AppTheme.cardBorder
-                : color.withValues(alpha: 0.4),
+            color:
+                alert.isRead
+                    ? AppTheme.cardBorder
+                    : color.withValues(alpha: 0.4),
           ),
         ),
         child: Row(
@@ -130,7 +140,9 @@ class _AlertTile extends StatelessWidget {
                           style: TextStyle(
                             color: AppTheme.textPrimary,
                             fontWeight:
-                                alert.isRead ? FontWeight.normal : FontWeight.w600,
+                                alert.isRead
+                                    ? FontWeight.normal
+                                    : FontWeight.w600,
                             fontSize: 14,
                           ),
                         ),
