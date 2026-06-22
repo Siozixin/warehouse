@@ -14,14 +14,18 @@ class ChartColors {
 
 class SensorCharts extends StatelessWidget {
   final List<SensorReading> readings;
+  final double minTempThreshold;
   final double maxTempThreshold;
+  final double minHumidityThreshold;
   final double maxHumidityThreshold;
   final String zoneName;
 
   const SensorCharts({
     super.key,
     required this.readings,
+    required this.minTempThreshold,
     required this.maxTempThreshold,
+    required this.minHumidityThreshold,
     required this.maxHumidityThreshold,
     required this.zoneName,
   });
@@ -60,8 +64,10 @@ class SensorCharts extends StatelessWidget {
           title: 'Temperature',
           unit: '°C',
           lineColor: ChartColors.temperature,
-          threshold: maxTempThreshold,
-          thresholdLabel: 'Max ${maxTempThreshold.toStringAsFixed(1)}°C',
+          lowerThreshold: minTempThreshold,
+          upperThreshold: maxTempThreshold,
+          lowerThresholdLabel: 'Min ${minTempThreshold.toStringAsFixed(1)}°C',
+          upperThresholdLabel: 'Max ${maxTempThreshold.toStringAsFixed(1)}°C',
           readings: readings,
           valueOf: (r) => r.temperature,
           minY: 0,
@@ -72,8 +78,12 @@ class SensorCharts extends StatelessWidget {
           title: 'Humidity',
           unit: '%',
           lineColor: ChartColors.humidity,
-          threshold: maxHumidityThreshold,
-          thresholdLabel: 'Max ${maxHumidityThreshold.toStringAsFixed(0)}%',
+          lowerThreshold: minHumidityThreshold,
+          upperThreshold: maxHumidityThreshold,
+          lowerThresholdLabel:
+              'Min ${minHumidityThreshold.toStringAsFixed(0)}%',
+          upperThresholdLabel:
+              'Max ${maxHumidityThreshold.toStringAsFixed(0)}%',
           readings: readings,
           valueOf: (r) => r.humidity,
           minY: 40,
@@ -88,8 +98,10 @@ class _MetricChart extends StatelessWidget {
   final String title;
   final String unit;
   final Color lineColor;
-  final double threshold;
-  final String thresholdLabel;
+  final double lowerThreshold;
+  final double upperThreshold;
+  final String lowerThresholdLabel;
+  final String upperThresholdLabel;
   final List<SensorReading> readings;
   final double Function(SensorReading) valueOf;
   final double minY;
@@ -99,8 +111,10 @@ class _MetricChart extends StatelessWidget {
     required this.title,
     required this.unit,
     required this.lineColor,
-    required this.threshold,
-    required this.thresholdLabel,
+    required this.lowerThreshold,
+    required this.upperThreshold,
+    required this.lowerThresholdLabel,
+    required this.upperThresholdLabel,
     required this.readings,
     required this.valueOf,
     required this.minY,
@@ -117,9 +131,13 @@ class _MetricChart extends StatelessWidget {
             .map((e) => FlSpot(e.key.toDouble(), valueOf(e.value)))
             .toList();
 
-    final thresholdSpots = List.generate(
+    final lowerThresholdSpots = List.generate(
       readings.length,
-      (i) => FlSpot(i.toDouble(), threshold),
+      (i) => FlSpot(i.toDouble(), lowerThreshold),
+    );
+    final upperThresholdSpots = List.generate(
+      readings.length,
+      (i) => FlSpot(i.toDouble(), upperThreshold),
     );
 
     final labelInterval = readings.length <= 6 ? 1 : (readings.length ~/ 5);
@@ -157,11 +175,18 @@ class _MetricChart extends StatelessWidget {
               Container(width: 16, height: 2, color: ChartColors.threshold),
               const SizedBox(width: 4),
               Text(
-                thresholdLabel,
+                upperThresholdLabel,
                 style: const TextStyle(
                   color: ChartColors.threshold,
                   fontSize: 10,
                 ),
+              ),
+              const SizedBox(width: 10),
+              Container(width: 16, height: 2, color: AppTheme.success),
+              const SizedBox(width: 4),
+              Text(
+                lowerThresholdLabel,
+                style: const TextStyle(color: AppTheme.success, fontSize: 10),
               ),
             ],
           ),
@@ -254,7 +279,15 @@ class _MetricChart extends StatelessWidget {
                     ),
                   ),
                   LineChartBarData(
-                    spots: thresholdSpots,
+                    spots: lowerThresholdSpots,
+                    isCurved: false,
+                    color: AppTheme.success,
+                    barWidth: 2,
+                    dotData: const FlDotData(show: false),
+                    dashArray: [4, 4],
+                  ),
+                  LineChartBarData(
+                    spots: upperThresholdSpots,
                     isCurved: false,
                     color: ChartColors.threshold,
                     barWidth: 2,
