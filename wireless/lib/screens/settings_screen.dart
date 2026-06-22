@@ -12,19 +12,6 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   final _service = SensorSimulatorService();
-  late double _maxTemp;
-  late double _maxHumidity;
-  late bool _autoCooling;
-  late bool _autoDehumidify;
-
-  @override
-  void initState() {
-    super.initState();
-    _maxTemp = _service.maxTemperature;
-    _maxHumidity = _service.maxHumidity;
-    _autoCooling = _service.autoCoolingEnabled;
-    _autoDehumidify = _service.autoDehumidifyEnabled;
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,97 +28,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _sectionTitle('Temperature Thresholds'),
-          _settingsCard(
-            child: Column(
-              children: [
-                _sliderRow(
-                  label: 'Max Temperature',
-                  value: _maxTemp,
-                  min: 2,
-                  max: 15,
-                  unit: '°C',
-                  color: AppTheme.accent,
-                  onChanged: (v) => setState(() => _maxTemp = v),
-                ),
-                const Divider(color: AppTheme.cardBorder),
-                _sliderRow(
-                  label: 'Max Humidity',
-                  value: _maxHumidity,
-                  min: 50,
-                  max: 95,
-                  unit: '%',
-                  color: AppTheme.info,
-                  onChanged: (v) => setState(() => _maxHumidity = v),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      _service.setThresholds(_maxTemp, _maxHumidity);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Thresholds updated')),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primary,
-                      foregroundColor: Colors.white,
-                    ),
-                    child: const Text('Apply Thresholds'),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-          _sectionTitle('Automation'),
-          _settingsCard(
-            child: Column(
-              children: [
-                SwitchListTile(
-                  title: const Text(
-                    'Auto-Cooling',
-                    style: TextStyle(color: AppTheme.textPrimary),
-                  ),
-                  subtitle: const Text(
-                    'Engage cooling when temperature exceeds threshold',
-                    style: TextStyle(
-                      color: AppTheme.textSecondary,
-                      fontSize: 12,
-                    ),
-                  ),
-                  value: _autoCooling,
-                  activeColor: AppTheme.accent,
-                  onChanged: (v) {
-                    setState(() => _autoCooling = v);
-                    _service.setAutoCooling(v);
-                  },
-                ),
-                const Divider(color: AppTheme.cardBorder),
-                SwitchListTile(
-                  title: const Text(
-                    'Auto-Dehumidify',
-                    style: TextStyle(color: AppTheme.textPrimary),
-                  ),
-                  subtitle: const Text(
-                    'Engage ventilation/dehumidifier when humidity exceeds threshold',
-                    style: TextStyle(
-                      color: AppTheme.textSecondary,
-                      fontSize: 12,
-                    ),
-                  ),
-                  value: _autoDehumidify,
-                  activeColor: AppTheme.accent,
-                  onChanged: (v) {
-                    setState(() => _autoDehumidify = v);
-                    _service.setAutoDehumidify(v);
-                  },
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
           _sectionTitle('Security'),
           _settingsCard(
             child: Column(
@@ -221,43 +117,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         border: Border.all(color: AppTheme.cardBorder),
       ),
       child: child,
-    );
-  }
-
-  Widget _sliderRow({
-    required String label,
-    required double value,
-    required double min,
-    required double max,
-    required String unit,
-    required Color color,
-    required ValueChanged<double> onChanged,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(label, style: const TextStyle(color: AppTheme.textPrimary)),
-              const Spacer(),
-              Text(
-                '${value.toStringAsFixed(1)}$unit',
-                style: TextStyle(color: color, fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
-          Slider(
-            value: value,
-            min: min,
-            max: max,
-            activeColor: color,
-            inactiveColor: AppTheme.cardBorder,
-            onChanged: onChanged,
-          ),
-        ],
-      ),
     );
   }
 
