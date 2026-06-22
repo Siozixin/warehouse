@@ -6,23 +6,23 @@ import 'sensor_charts.dart';
 
 class ZoneCard extends StatelessWidget {
   final WarehouseZone zone;
-  final double maxTemp;
-  final double maxHumidity;
+  final bool autoCoolingEnabled;
+  final bool autoDehumidifyEnabled;
   final VoidCallback onToggleCooling;
   final VoidCallback onToggleDehumidifier;
 
   const ZoneCard({
     super.key,
     required this.zone,
-    required this.maxTemp,
-    required this.maxHumidity,
+    required this.autoCoolingEnabled,
+    required this.autoDehumidifyEnabled,
     required this.onToggleCooling,
     required this.onToggleDehumidifier,
   });
 
   @override
   Widget build(BuildContext context) {
-    final status = zone.getStatus(maxTemp, maxHumidity);
+    final status = zone.getStatus();
     final statusColor = _statusColor(status);
     final statusLabel = _statusLabel(status);
 
@@ -92,7 +92,8 @@ class ZoneCard extends StatelessWidget {
                   label: 'Temperature',
                   value: '${zone.temperature.toStringAsFixed(1)}°C',
                   color:
-                      zone.temperature > maxTemp
+                      zone.temperature < zone.tempLower ||
+                              zone.temperature > zone.tempUpper
                           ? AppTheme.critical
                           : ChartColors.temperature,
                 ),
@@ -104,7 +105,8 @@ class ZoneCard extends StatelessWidget {
                   label: 'Humidity',
                   value: '${zone.humidity.toStringAsFixed(0)}%',
                   color:
-                      zone.humidity > maxHumidity
+                      zone.humidity < zone.humidityLower ||
+                              zone.humidity > zone.humidityUpper
                           ? AppTheme.critical
                           : ChartColors.humidity,
                 ),
@@ -112,9 +114,37 @@ class ZoneCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
+          Row(
+            children: [
+              _thresholdTag(
+                'Temp',
+                '${zone.tempLower.toStringAsFixed(1)}°C–${zone.tempUpper.toStringAsFixed(1)}°C',
+              ),
+              const SizedBox(width: 8),
+              _thresholdTag(
+                'RH',
+                '${zone.humidityLower.toStringAsFixed(0)}%–${zone.humidityUpper.toStringAsFixed(0)}%',
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              _thresholdTag(
+                'Mode',
+                zone.isAuto ? 'Auto' : 'Manual',
+                isPrimary: true,
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
           _actuatorRow(
             icon: Icons.ac_unit,
-            label: 'Cooling',
+            label: 'Cooling / Heating',
+            statusTag:
+                zone.coolingActive
+                    ? (autoCoolingEnabled ? 'Auto' : 'Manual')
+                    : (autoCoolingEnabled ? 'Auto ready' : 'Off'),
             active: zone.coolingActive,
             activeColor: AppTheme.success,
             onToggle: onToggleCooling,
@@ -122,7 +152,11 @@ class ZoneCard extends StatelessWidget {
           const SizedBox(height: 6),
           _actuatorRow(
             icon: Icons.air,
-            label: 'Dehumidifier / Ventilation',
+            label: 'Humidifier / Dehumidifier',
+            statusTag:
+                zone.dehumidifierActive
+                    ? (autoDehumidifyEnabled ? 'Auto' : 'Manual')
+                    : (autoDehumidifyEnabled ? 'Auto ready' : 'Off'),
             active: zone.dehumidifierActive,
             activeColor: ChartColors.humidity,
             onToggle: onToggleDehumidifier,
@@ -132,9 +166,46 @@ class ZoneCard extends StatelessWidget {
     );
   }
 
+  Widget _thresholdTag(String label, String value, {bool isPrimary = false}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        color:
+            isPrimary
+                ? AppTheme.primary.withValues(alpha: 0.1)
+                : AppTheme.surfaceLight,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color:
+              isPrimary
+                  ? AppTheme.primary.withValues(alpha: 0.2)
+                  : AppTheme.cardBorder,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(color: AppTheme.textSecondary, fontSize: 10),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              color: isPrimary ? AppTheme.primary : AppTheme.textPrimary,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _actuatorRow({
     required IconData icon,
     required String label,
+    required String statusTag,
     required bool active,
     required Color activeColor,
     required VoidCallback onToggle,
@@ -148,12 +219,22 @@ class ZoneCard extends StatelessWidget {
         ),
         const SizedBox(width: 6),
         Expanded(
-          child: Text(
-            active ? '$label — ON' : '$label — OFF',
-            style: TextStyle(
-              color: active ? activeColor : AppTheme.textSecondary,
-              fontSize: 11,
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '$label — ${active ? 'ON' : 'OFF'}',
+                style: TextStyle(
+                  color: active ? activeColor : AppTheme.textSecondary,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Text(
+                statusTag,
+                style: TextStyle(color: AppTheme.textSecondary, fontSize: 10),
+              ),
+            ],
           ),
         ),
         TextButton.icon(
