@@ -22,18 +22,41 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final _service = SensorSimulatorService();
   final _timeFormat = DateFormat('HH:mm:ss');
   int _selectedZoneIndex = 0;
+  late ThresholdMode _selectedThresholdMode;
+  late TextEditingController _tempLowerController;
+  late TextEditingController _tempUpperController;
+  late TextEditingController _humidityLowerController;
+  late TextEditingController _humidityUpperController;
 
   @override
   void initState() {
     super.initState();
     _service.start();
+    _selectedThresholdMode = ThresholdMode.auto;
+    _tempLowerController = TextEditingController();
+    _tempUpperController = TextEditingController();
+    _humidityLowerController = TextEditingController();
+    _humidityUpperController = TextEditingController();
+    _syncSelectedZoneInputs(_service.zones[_selectedZoneIndex]);
     // alerts stream handled via direct reads in RecentAlerts; no header badge
   }
 
   @override
   void dispose() {
     _service.stop();
+    _tempLowerController.dispose();
+    _tempUpperController.dispose();
+    _humidityLowerController.dispose();
+    _humidityUpperController.dispose();
     super.dispose();
+  }
+
+  void _syncSelectedZoneInputs(WarehouseZone zone) {
+    _selectedThresholdMode = zone.thresholdMode;
+    _tempLowerController.text = zone.tempLower.toStringAsFixed(1);
+    _tempUpperController.text = zone.tempUpper.toStringAsFixed(1);
+    _humidityLowerController.text = zone.humidityLower.toStringAsFixed(0);
+    _humidityUpperController.text = zone.humidityUpper.toStringAsFixed(0);
   }
 
   @override
@@ -61,10 +84,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         const SizedBox(height: 12),
                         _buildZoneSelector(zones),
                         const SizedBox(height: 10),
+                        _buildSelectedZoneControl(selectedZone),
+                        const SizedBox(height: 10),
                         SensorCharts(
                           readings: selectedZone.history,
-                          maxTempThreshold: _service.maxTemperature,
-                          maxHumidityThreshold: _service.maxHumidity,
+                          minTempThreshold: selectedZone.tempLower,
+                          maxTempThreshold: selectedZone.tempUpper,
+                          minHumidityThreshold: selectedZone.humidityLower,
+                          maxHumidityThreshold: selectedZone.humidityUpper,
                           zoneName: selectedZone.name,
                         ),
                         const SizedBox(height: 12),
@@ -73,8 +100,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             padding: const EdgeInsets.only(bottom: 10),
                             child: ZoneCard(
                               zone: zone,
-                              maxTemp: _service.maxTemperature,
-                              maxHumidity: _service.maxHumidity,
+                              autoCoolingEnabled: _service.autoCoolingEnabled,
+                              autoDehumidifyEnabled:
+                                  _service.autoDehumidifyEnabled,
                               onToggleCooling:
                                   () => _service.toggleCooling(zone.id),
                               onToggleDehumidifier:
@@ -238,14 +266,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
         subtitle: '≤${_service.maxHumidity.toStringAsFixed(0)}%',
       ),
       StatCard(
-        label: 'Cooling',
+        label: 'Cooling/Heating',
         value: '${_service.activeCoolingCount}',
         unit: '/${zones.length}',
         icon: Icons.ac_unit,
         color: AppTheme.success,
       ),
       StatCard(
-        label: 'Dehumidifier',
+        label: 'Humidifier/Dehumidifier',
         value: '${_service.activeDehumidifierCount}',
         unit: '/${zones.length}',
         icon: Icons.air,
@@ -268,7 +296,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         scrollDirection: Axis.horizontal,
         itemCount: cards.length,
         separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemBuilder: (_, index) => SizedBox(width: 148, child: cards[index]),
+        itemBuilder: (_, index) => SizedBox(width: 228, child: cards[index]),
       ),
     );
   }
@@ -287,7 +315,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: ChoiceChip(
                   label: Text(zone.name),
                   selected: isSelected,
-                  onSelected: (_) => setState(() => _selectedZoneIndex = index),
+                  onSelected: (_) {
+                    setState(() {
+                      _selectedZoneIndex = index;
+                      _syncSelectedZoneInputs(zone);
+                    });
+                  },
                   selectedColor: AppTheme.primary,
                   backgroundColor: AppTheme.surface,
                   labelStyle: TextStyle(
@@ -302,6 +335,202 @@ class _DashboardScreenState extends State<DashboardScreen> {
             }).toList(),
       ),
     );
+  }
+
+  Widget _buildSelectedZoneControl(WarehouseZone zone) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.cardBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '${zone.name} Threshold Control',
+            style: const TextStyle(
+              color: AppTheme.textPrimary,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '${zone.location} • ${zone.type == ZoneType.tropicalFruit ? 'Tropical Fruit Storage' : 'Packaging/Loading Bay'}',
+            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              _modeChip(zone, ThresholdMode.auto, 'Auto'),
+              const SizedBox(width: 8),
+              _modeChip(zone, ThresholdMode.manual, 'Manual'),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _thresholdInput(
+                  label: 'Temp lower',
+                  controller: _tempLowerController,
+                  suffix: '°C',
+                  enabled: _selectedThresholdMode == ThresholdMode.manual,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _thresholdInput(
+                  label: 'Temp upper',
+                  controller: _tempUpperController,
+                  suffix: '°C',
+                  enabled: _selectedThresholdMode == ThresholdMode.manual,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: _thresholdInput(
+                  label: 'RH lower',
+                  controller: _humidityLowerController,
+                  suffix: '%',
+                  enabled: _selectedThresholdMode == ThresholdMode.manual,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _thresholdInput(
+                  label: 'RH upper',
+                  controller: _humidityUpperController,
+                  suffix: '%',
+                  enabled: _selectedThresholdMode == ThresholdMode.manual,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton(
+                  onPressed:
+                      _selectedThresholdMode == ThresholdMode.manual
+                          ? () => _applyZoneThresholds(zone)
+                          : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primary,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Apply Manual Thresholds'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () {
+                    setState(() {
+                      _service.setZoneThresholdMode(
+                        zone.id,
+                        ThresholdMode.auto,
+                      );
+                      _syncSelectedZoneInputs(zone);
+                    });
+                  },
+                  child: const Text('Use Recommended'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _modeChip(WarehouseZone zone, ThresholdMode mode, String label) {
+    final active = _selectedThresholdMode == mode;
+    return ChoiceChip(
+      label: Text(label),
+      selected: active,
+      onSelected: (_) {
+        setState(() {
+          _selectedThresholdMode = mode;
+          _service.setZoneThresholdMode(zone.id, mode);
+          _syncSelectedZoneInputs(zone);
+        });
+      },
+      selectedColor: AppTheme.primary,
+      backgroundColor: AppTheme.surface,
+      labelStyle: TextStyle(
+        color: active ? Colors.white : AppTheme.textSecondary,
+        fontSize: 12,
+      ),
+      side: BorderSide(color: active ? AppTheme.primary : AppTheme.cardBorder),
+    );
+  }
+
+  Widget _thresholdInput({
+    required String label,
+    required TextEditingController controller,
+    required String suffix,
+    required bool enabled,
+  }) {
+    return TextField(
+      controller: controller,
+      enabled: enabled,
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      decoration: InputDecoration(
+        labelText: label,
+        suffixText: suffix,
+        border: const OutlineInputBorder(),
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 12,
+        ),
+      ),
+    );
+  }
+
+  void _applyZoneThresholds(WarehouseZone zone) {
+    final tempLower = double.tryParse(_tempLowerController.text);
+    final tempUpper = double.tryParse(_tempUpperController.text);
+    final humidityLower = double.tryParse(_humidityLowerController.text);
+    final humidityUpper = double.tryParse(_humidityUpperController.text);
+
+    if (tempLower == null ||
+        tempUpper == null ||
+        humidityLower == null ||
+        humidityUpper == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter valid threshold values.')),
+      );
+      return;
+    }
+    if (tempLower >= tempUpper || humidityLower >= humidityUpper) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Lower values must be below upper values.'),
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _service.setZoneThresholds(
+        zone.id,
+        tempLower: tempLower,
+        tempUpper: tempUpper,
+        humidityLower: humidityLower,
+        humidityUpper: humidityUpper,
+      );
+      _selectedThresholdMode = ThresholdMode.manual;
+      _syncSelectedZoneInputs(zone);
+    });
   }
 
   Widget _buildRecentAlerts() {
