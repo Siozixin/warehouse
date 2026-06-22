@@ -22,30 +22,34 @@ class SensorSimulatorService {
     WarehouseZone(
       id: 'zone_a',
       name: 'Zone A',
-      location: 'Vegetable Storage',
-      temperature: 4.2,
-      humidity: 72.0,
+      location: 'Tropical Fruit Storage',
+      type: ZoneType.tropicalFruit,
+      temperature: 9.2,
+      humidity: 88.0,
     ),
     WarehouseZone(
       id: 'zone_b',
       name: 'Zone B',
-      location: 'Cold Storage',
-      temperature: 2.8,
-      humidity: 65.0,
+      location: 'Tropical Fruit Storage',
+      type: ZoneType.tropicalFruit,
+      temperature: 11.3,
+      humidity: 91.0,
     ),
     WarehouseZone(
       id: 'zone_c',
       name: 'Zone C',
       location: 'Loading Bay',
-      temperature: 8.5,
-      humidity: 58.0,
+      type: ZoneType.packagingLoading,
+      temperature: 13.2,
+      humidity: 63.0,
     ),
     WarehouseZone(
       id: 'zone_d',
       name: 'Zone D',
       location: 'Packaging Area',
-      temperature: 6.1,
-      humidity: 68.0,
+      type: ZoneType.packagingLoading,
+      temperature: 13.8,
+      humidity: 67.0,
     ),
   ];
 
@@ -119,8 +123,10 @@ class SensorSimulatorService {
         zone.history.removeAt(0);
       }
 
-      final tempHigh = zone.temperature > maxTemperature;
-      final humidityHigh = zone.humidity > maxHumidity;
+      final tempHigh = zone.temperature > zone.tempUpper;
+      final tempLow = zone.temperature < zone.tempLower;
+      final humidityHigh = zone.humidity > zone.humidityUpper;
+      final humidityLow = zone.humidity < zone.humidityLower;
 
       if (autoCoolingEnabled && tempHigh) {
         if (!zone.coolingActive) {
@@ -128,7 +134,7 @@ class SensorSimulatorService {
           _addAlert(
             title: 'Auto-Cooling Activated',
             message:
-                '${zone.name}: Temperature ${zone.temperature.toStringAsFixed(1)}°C exceeds ${maxTemperature.toStringAsFixed(1)}°C. Cooling engaged.',
+                '${zone.name}: Temperature ${zone.temperature.toStringAsFixed(1)}°C exceeds upper threshold ${zone.tempUpper.toStringAsFixed(1)}°C. Cooling engaged.',
             type: AlertType.temperature,
             severity: AlertSeverity.warning,
             zoneId: zone.id,
@@ -152,7 +158,7 @@ class SensorSimulatorService {
           _addAlert(
             title: 'Auto-Dehumidifier Activated',
             message:
-                '${zone.name}: Humidity ${zone.humidity.toStringAsFixed(0)}% exceeds ${maxHumidity.toStringAsFixed(0)}%. Ventilation/dehumidifier engaged.',
+                '${zone.name}: Humidity ${zone.humidity.toStringAsFixed(0)}% exceeds upper threshold ${zone.humidityUpper.toStringAsFixed(0)}%. Ventilation/dehumidifier engaged.',
             type: AlertType.humidity,
             severity: AlertSeverity.warning,
             zoneId: zone.id,
@@ -168,6 +174,37 @@ class SensorSimulatorService {
           severity: AlertSeverity.info,
           zoneId: zone.id,
         );
+      }
+
+      if (autoDehumidifyEnabled && humidityLow) {
+        zone.humidity = (zone.humidity + 0.7).clamp(40.0, 95.0);
+      }
+
+      if (autoCoolingEnabled && tempLow) {
+        zone.temperature = (zone.temperature + 0.3).clamp(1.0, 15.0);
+      }
+
+      if ((tempLow || humidityLow) && zone.history.isNotEmpty) {
+        if (tempLow) {
+          _addAlert(
+            title: 'Low Temperature Alert',
+            message:
+                '${zone.name}: Temperature ${zone.temperature.toStringAsFixed(1)}°C below lower threshold ${zone.tempLower.toStringAsFixed(1)}°C.',
+            type: AlertType.temperature,
+            severity: AlertSeverity.warning,
+            zoneId: zone.id,
+          );
+        }
+        if (humidityLow) {
+          _addAlert(
+            title: 'Low Humidity Alert',
+            message:
+                '${zone.name}: Humidity ${zone.humidity.toStringAsFixed(0)}% below lower threshold ${zone.humidityLower.toStringAsFixed(0)}%.',
+            type: AlertType.humidity,
+            severity: AlertSeverity.warning,
+            zoneId: zone.id,
+          );
+        }
       }
     }
 
@@ -208,6 +245,60 @@ class SensorSimulatorService {
       }
     }
 
+    _zonesController.add(zones);
+    _alertsController.add(alerts);
+  }
+
+  WarehouseZone _findZone(String zoneId) =>
+      zones.firstWhere((zone) => zone.id == zoneId);
+
+  void setZoneThresholds(
+    String zoneId, {
+    required double tempLower,
+    required double tempUpper,
+    required double humidityLower,
+    required double humidityUpper,
+  }) {
+    final zone = _findZone(zoneId);
+    zone.thresholdMode = ThresholdMode.manual;
+    zone.tempLower = tempLower;
+    zone.tempUpper = tempUpper;
+    zone.humidityLower = humidityLower;
+    zone.humidityUpper = humidityUpper;
+    _addAlert(
+      title: '${zone.name} Thresholds Updated',
+      message:
+          'Manual thresholds set: ${tempLower.toStringAsFixed(1)}°C–${tempUpper.toStringAsFixed(1)}°C, ${humidityLower.toStringAsFixed(0)}%–${humidityUpper.toStringAsFixed(0)}%.',
+      type: AlertType.system,
+      severity: AlertSeverity.info,
+      zoneId: zoneId,
+    );
+    _zonesController.add(zones);
+    _alertsController.add(alerts);
+  }
+
+  void setZoneThresholdMode(String zoneId, ThresholdMode mode) {
+    final zone = _findZone(zoneId);
+    if (mode == ThresholdMode.auto) {
+      zone.applyAutoThresholds();
+      _addAlert(
+        title: '${zone.name} Auto Thresholds Applied',
+        message:
+            'Recommended ${zone.type == ZoneType.tropicalFruit ? 'Tropical Fruit' : 'Packaging/Loading Bay'} thresholds were applied.',
+        type: AlertType.system,
+        severity: AlertSeverity.info,
+        zoneId: zoneId,
+      );
+    } else {
+      zone.thresholdMode = ThresholdMode.manual;
+      _addAlert(
+        title: '${zone.name} Manual Threshold Mode',
+        message: 'Manual threshold adjustments are now enabled for this zone.',
+        type: AlertType.system,
+        severity: AlertSeverity.info,
+        zoneId: zoneId,
+      );
+    }
     _zonesController.add(zones);
     _alertsController.add(alerts);
   }
@@ -346,10 +437,5 @@ class SensorSimulatorService {
       zones.where((z) => z.dehumidifierActive).length;
 
   int get criticalZoneCount =>
-      zones
-          .where(
-            (z) =>
-                z.getStatus(maxTemperature, maxHumidity) == ZoneStatus.critical,
-          )
-          .length;
+      zones.where((z) => z.getStatus() == ZoneStatus.critical).length;
 }
